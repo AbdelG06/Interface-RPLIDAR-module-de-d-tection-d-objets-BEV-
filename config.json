@@ -1,0 +1,16 @@
+{
+    "serial_port": "COM3",
+    "baudrate": 115200,
+
+    "display_refresh_hz": 10,
+
+    "min_distance": 0.15,
+    "max_distance": 12.0,
+
+    "dbscan_eps": 0.30,
+    "dbscan_min_samples": 4,
+
+    "safety_radius": 2.0,
+
+    "tracking_distance_threshold": 0.5
+}

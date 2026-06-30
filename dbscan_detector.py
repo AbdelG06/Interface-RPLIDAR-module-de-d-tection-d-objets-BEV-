@@ -8,8 +8,8 @@ from object_detection import ObjectDetection
 class DBSCANDetector:
 
     def __init__(self,
-                 eps=0.3,
-                 min_samples=4):
+                 eps=1.0,
+                 min_samples=1):
 
         self.eps = eps
         self.min_samples = min_samples

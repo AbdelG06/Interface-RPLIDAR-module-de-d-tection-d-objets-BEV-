@@ -8,17 +8,17 @@ class ControlsPanel(QWidget):
 
         layout = QVBoxLayout(self)
 
-        self.connect_btn = QPushButton("Connect")
+        self.connect_btn = QPushButton("🔌 Connect")
 
-        self.start_btn = QPushButton("Start Scan")
+        self.start_btn = QPushButton("▶ Start Scan")
 
-        self.stop_btn = QPushButton("Stop Scan")
+        self.stop_btn = QPushButton("⏹ Stop Scan")
 
-        self.import_btn = QPushButton("Import CSV")
+        self.import_btn = QPushButton("📂 Import CSV")
 
-        self.export_btn = QPushButton("Export CSV")
+        self.export_btn = QPushButton("📥Export CSV")
 
-        self.export_json_btn = QPushButton("Export JSON")
+        self.export_json_btn = QPushButton("📄 Export JSON")
 
         layout.addWidget(self.connect_btn)
         layout.addWidget(self.start_btn)

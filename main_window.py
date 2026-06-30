@@ -1,7 +1,7 @@
-import time
-
 from PySide6.QtWidgets import *
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import *
+
+import time
 
 from bev_widget import BEVWidget
 from polar_widget import PolarWidget
@@ -10,11 +10,7 @@ from detections_table import DetectionsTable
 from metrics_widget import MetricsWidget
 
 from csv_player import CSVPlayer
-
 from dbscan_detector import DBSCANDetector
-from tracker import CentroidTracker
-
-from alert_manager import AlertManager
 
 
 class MainWindow(QMainWindow):
@@ -27,15 +23,11 @@ class MainWindow(QMainWindow):
             "RPLIDAR BEV Detection"
         )
 
-        self.resize(1600, 900)
+        self.resize(1800, 1000)
 
         self.csv_player = CSVPlayer()
 
         self.detector = DBSCANDetector()
-
-        self.tracker = CentroidTracker()
-
-        self.alert_manager = AlertManager()
 
         self.timer = QTimer()
 
@@ -43,19 +35,88 @@ class MainWindow(QMainWindow):
             self.update_scan
         )
 
-        self.init_ui()
-
         self.last_time = time.time()
 
-    def init_ui(self):
+        self.build_ui()
+
+    def build_ui(self):
 
         central = QWidget()
 
         self.setCentralWidget(central)
 
-        main_layout = QHBoxLayout(central)
+        main_layout = QVBoxLayout(central)
+
+        # HEADER
+
+        header = QFrame()
+
+        header.setFixedHeight(70)
+
+        header.setStyleSheet("""
+        background:#111827;
+        border-radius:15px;
+        """)
+
+        h = QHBoxLayout(header)
+
+        title = QLabel(
+            "RPLIDAR BEV DETECTION SYSTEM"
+        )
+
+        title.setStyleSheet("""
+        color:#00E5FF;
+        font-size:24px;
+        font-weight:bold;
+        """)
+
+        status = QLabel(
+            "● ONLINE"
+        )
+
+        status.setStyleSheet("""
+        color:#00FF95;
+        font-weight:bold;
+        """)
+
+        h.addWidget(title)
+
+        h.addStretch()
+
+        h.addWidget(status)
+
+        main_layout.addWidget(header)
+
+        # BODY
+
+        body = QHBoxLayout()
+
+        main_layout.addLayout(body)
+
+        left_panel = QFrame()
+
+        left_panel.setFixedWidth(280)
+
+        left_panel.setStyleSheet("""
+        background:#111827;
+        border-radius:15px;
+        """)
+
+        left_layout = QVBoxLayout(left_panel)
 
         self.controls = ControlsPanel()
+
+        self.metrics = MetricsWidget()
+
+        left_layout.addWidget(self.controls)
+
+        left_layout.addWidget(self.metrics)
+
+        left_layout.addStretch()
+
+        body.addWidget(left_panel)
+
+        right_panel = QVBoxLayout()
 
         self.bev = BEVWidget()
 
@@ -63,21 +124,35 @@ class MainWindow(QMainWindow):
 
         self.table = DetectionsTable()
 
-        self.metrics = MetricsWidget()
+        right_panel.addWidget(
+            self.bev,
+            5
+        )
 
-        left = QVBoxLayout()
+        splitter = QSplitter(
+            Qt.Horizontal
+        )
 
-        left.addWidget(self.controls)
-        left.addWidget(self.metrics)
+        splitter.addWidget(
+            self.polar
+        )
 
-        right = QVBoxLayout()
+        splitter.addWidget(
+            self.table
+        )
 
-        right.addWidget(self.bev, 3)
-        right.addWidget(self.polar, 1)
-        right.addWidget(self.table, 1)
+        splitter.setSizes(
+            [300, 700]
+        )
 
-        main_layout.addLayout(left, 1)
-        main_layout.addLayout(right, 4)
+        right_panel.addWidget(
+            splitter,
+            2
+        )
+
+        body.addLayout(
+            right_panel
+        )
 
         self.controls.import_btn.clicked.connect(
             self.import_csv
@@ -95,9 +170,9 @@ class MainWindow(QMainWindow):
 
         filename, _ = QFileDialog.getOpenFileName(
             self,
-            "Open CSV",
+            "Import CSV",
             "",
-            "*.csv"
+            "CSV Files (*.csv)"
         )
 
         if filename:
@@ -106,11 +181,21 @@ class MainWindow(QMainWindow):
                 filename
             )
 
+            QMessageBox.information(
+                self,
+                "CSV",
+                "CSV chargé avec succès"
+            )
+
     def start_scan(self):
+
+        print("START")
 
         self.timer.start(100)
 
     def stop_scan(self):
+
+        print("STOP")
 
         self.timer.stop()
 
@@ -125,33 +210,34 @@ class MainWindow(QMainWindow):
             frame
         )
 
-        detections = self.detector.detect(points)
-
-        detections = self.tracker.update(
-            detections
+        detections = self.detector.detect(
+            points
         )
 
-        alerts = self.alert_manager.check(
-            detections
+        # BEV
+
+        self.bev.update_points(
+            points
         )
 
-        for a in alerts:
-            print(a)
-
-        self.bev.update_points(points)
-
-        self.bev.update_detections(
-            detections
-        )
+        # POLAR
 
         self.polar.update_polar(
             frame["angle"],
             frame["distance"]
         )
 
-        fps = 1.0 / (
-                time.time()
-                - self.last_time
+        # TABLE
+
+        self.table.update_table(
+            detections
+        )
+
+        # KPI
+
+        fps = 1 / max(
+            0.001,
+            time.time() - self.last_time
         )
 
         self.last_time = time.time()
@@ -160,8 +246,4 @@ class MainWindow(QMainWindow):
             len(points),
             len(detections),
             fps
-        )
-
-        self.table.update_table(
-            detections
         )

@@ -1,6 +1,43 @@
 from PySide6.QtWidgets import *
 
 
+class Card(QFrame):
+
+    def __init__(self,title):
+
+        super().__init__()
+
+        self.setStyleSheet("""
+        background:#1A2333;
+        border-radius:12px;
+        """)
+
+        layout = QVBoxLayout(self)
+
+        self.value = QLabel("0")
+
+        self.value.setStyleSheet("""
+        font-size:28px;
+        color:#00E5FF;
+        font-weight:bold;
+        """)
+
+        text = QLabel(title)
+
+        text.setStyleSheet("""
+        color:#9CA3AF;
+        """)
+
+        layout.addWidget(self.value)
+        layout.addWidget(text)
+
+    def set_value(self,value):
+
+        self.value.setText(
+            str(value)
+        )
+
+
 class MetricsWidget(QWidget):
 
     def __init__(self):
@@ -9,28 +46,41 @@ class MetricsWidget(QWidget):
 
         layout = QVBoxLayout(self)
 
-        self.points_label = QLabel("Points : 0")
-        self.objects_label = QLabel("Objects : 0")
-        self.fps_label = QLabel("FPS : 0")
+        self.points = Card(
+            "POINTS"
+        )
 
-        layout.addWidget(self.points_label)
-        layout.addWidget(self.objects_label)
-        layout.addWidget(self.fps_label)
+        self.objects = Card(
+            "OBJECTS"
+        )
+
+        self.fps = Card(
+            "FPS"
+        )
+
+        layout.addWidget(
+            self.points
+        )
+
+        layout.addWidget(
+            self.objects
+        )
+
+        layout.addWidget(
+            self.fps
+        )
 
     def update_metrics(
-            self,
-            point_count,
-            object_count,
-            fps):
+        self,
+        points,
+        objects,
+        fps
+    ):
 
-        self.points_label.setText(
-            f"Points : {point_count}"
-        )
+        self.points.set_value(points)
 
-        self.objects_label.setText(
-            f"Objects : {object_count}"
-        )
+        self.objects.set_value(objects)
 
-        self.fps_label.setText(
-            f"FPS : {fps:.1f}"
+        self.fps.set_value(
+            round(fps,1)
         )

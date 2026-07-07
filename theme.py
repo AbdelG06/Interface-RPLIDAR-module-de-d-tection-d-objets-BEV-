@@ -14,34 +14,57 @@ QWidget{
 QFrame#Card{
     background:#111827;
     border:1px solid #1F2937;
-    border-radius:15px;
+    border-radius:16px;
+}
+
+QScrollArea{
+    border:none;
+    background:transparent;
+}
+
+QScrollBar:vertical{
+    background:transparent;
+    width:10px;
+    margin:12px 2px 12px 2px;
+}
+
+QScrollBar::handle:vertical{
+    background:#334155;
+    border-radius:5px;
+    min-height:26px;
+}
+
+QScrollBar::handle:vertical:hover{
+    background:#475569;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical{
+    height:0px;
+    background:transparent;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical{
+    background:transparent;
 }
 
 QPushButton{
-    background:qlineargradient(
-        x1:0,y1:0,
-        x2:1,y2:0,
-        stop:0 #0066FF,
-        stop:1 #00E5FF
-    );
-
-    color:white;
-
-    font-weight:bold;
-
-    border:none;
-
+    background:#111827;
+    color:#E5E7EB;
+    font-weight:600;
+    border:1px solid #243047;
     border-radius:12px;
-
-    padding:12px;
+    padding:10px 14px;
 }
 
 QPushButton:hover{
-    background:#00E5FF;
+    background:#172033;
+    border:1px solid #00E5FF;
 }
 
 QPushButton:pressed{
-    background:#0050c8;
+    background:#0F172A;
 }
 
 QTableWidget{
@@ -57,11 +80,11 @@ QTableWidget{
 
 QHeaderView::section{
 
-    background:#1F2937;
+    background:#182033;
 
     border:none;
 
-    padding:8px;
+    padding:10px;
 
     font-weight:bold;
 

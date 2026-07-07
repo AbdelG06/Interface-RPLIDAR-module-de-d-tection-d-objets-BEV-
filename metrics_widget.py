@@ -8,16 +8,21 @@ class Card(QFrame):
         super().__init__()
 
         self.setStyleSheet("""
-        background:#1A2333;
-        border-radius:12px;
+        background:#111827;
+        border:1px solid #223047;
+        border-radius:14px;
         """)
 
+        self.setMinimumHeight(70)
+
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 10, 12, 10)
+        layout.setSpacing(4)
 
         self.value = QLabel("0")
 
         self.value.setStyleSheet("""
-        font-size:28px;
+        font-size:20px;
         color:#00E5FF;
         font-weight:bold;
         """)
@@ -25,7 +30,9 @@ class Card(QFrame):
         text = QLabel(title)
 
         text.setStyleSheet("""
-        color:#9CA3AF;
+        color:#94A3B8;
+        font-size:8.5pt;
+        letter-spacing:1px;
         """)
 
         layout.addWidget(self.value)
@@ -58,17 +65,14 @@ class MetricsWidget(QWidget):
             "FPS"
         )
 
-        layout.addWidget(
-            self.points
-        )
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-        layout.addWidget(
-            self.objects
-        )
+        layout.setSpacing(8)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(
-            self.fps
-        )
+        layout.addWidget(self.points)
+        layout.addWidget(self.objects)
+        layout.addWidget(self.fps)
 
     def update_metrics(
         self,

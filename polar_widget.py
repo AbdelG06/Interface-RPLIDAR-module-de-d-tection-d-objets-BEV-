@@ -1,6 +1,6 @@
 import pyqtgraph as pg
 
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QSizePolicy, QWidget
 from PySide6.QtWidgets import QVBoxLayout
 
 
@@ -13,6 +13,8 @@ class PolarWidget(QWidget):
         layout = QVBoxLayout(self)
 
         self.plot = pg.PlotWidget()
+        self.plot.setMinimumSize(360, 260)
+        self.plot.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         layout.addWidget(self.plot)
 

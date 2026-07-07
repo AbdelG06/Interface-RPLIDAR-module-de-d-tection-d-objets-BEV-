@@ -12,9 +12,12 @@ class AlertManager:
 
             if detection.distance <= self.safety_radius:
 
+                object_id = getattr(detection, "track_id", getattr(detection, "object_id", "?"))
+                name = getattr(detection, "name", "Objet")
+
                 alerts.append(
-                    f"ALERTE - Objet {detection.object_id} "
-                    f"a {detection.distance:.2f} m"
+                    f'ALERTE - Objet "{name}" '
+                    f"(ID {object_id}) à {detection.distance:.2f} m"
                 )
 
         return alerts

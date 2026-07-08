@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+import logging
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
@@ -11,6 +12,7 @@ class Lidar3DWidget(QWidget):
 
         self._fallback = False
         self._mesh_items = []
+        self._frame_index = 0
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -38,7 +40,8 @@ class Lidar3DWidget(QWidget):
             self.view.addItem(self.detection_scatter)
 
             layout.addWidget(self.view)
-        except Exception:
+        except Exception as exc:
+            logging.exception("3D view initialization failed")
             self._fallback = True
             label = QLabel("Vue 3D indisponible - installez PyQtGraph OpenGL")
             label.setAlignment(Qt.AlignCenter)
@@ -70,6 +73,7 @@ class Lidar3DWidget(QWidget):
         for item in self._mesh_items:
             self.view.removeItem(item)
         self._mesh_items = []
+        self._frame_index = 0
 
     @staticmethod
     def _rgba_tuple(color):
@@ -205,8 +209,9 @@ class Lidar3DWidget(QWidget):
 
         xyz = self._to_xyz(points)
         if xyz.size:
-            if xyz.shape[0] > 22000:
-                xyz = xyz[::4]
+            if xyz.shape[0] > 9000:
+                step = max(1, xyz.shape[0] // 9000)
+                xyz = xyz[::step]
 
             radial = np.hypot(xyz[:, 0], xyz[:, 1])
             keep = radial < 40.0
@@ -236,6 +241,10 @@ class Lidar3DWidget(QWidget):
             self.scatter.setData(pos=xyz, color=colors, size=2.6)
         else:
             self.scatter.setData(pos=np.zeros((0, 3)), color=np.zeros((0, 4)), size=2.6)
+
+        self._frame_index += 1
+        if self._frame_index % 3 != 0:
+            return
 
         self._clear_meshes()
 

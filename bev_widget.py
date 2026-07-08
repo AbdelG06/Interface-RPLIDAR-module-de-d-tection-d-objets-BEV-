@@ -74,6 +74,10 @@ class BEVWidget(QWidget):
             self.scatter.setData([], [])
             return
 
+        if xy.shape[0] > 6000:
+            step = max(1, xy.shape[0] // 6000)
+            xy = xy[::step]
+
         self.scatter.setData(x=xy[:, 0], y=xy[:, 1])
 
     @staticmethod

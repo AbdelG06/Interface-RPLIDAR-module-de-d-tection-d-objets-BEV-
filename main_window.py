@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import logging
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import (
@@ -33,6 +34,7 @@ from lidar_3d_widget import Lidar3DWidget
 from metrics_widget import MetricsWidget
 from object_tracker import ObjectTracker, TrackedDetection
 from polar_widget import PolarWidget
+from video_detector_window import VideoDetectorWindow
 from yolo_detector import YOLODetector
 
 
@@ -40,7 +42,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("ADAS Demo - BEV, 3D, YOLOv8, Tracking")
+        self.setWindowTitle("Radar Vision Control")
         screen = QGuiApplication.primaryScreen()
         if screen is not None:
             geometry = screen.availableGeometry()
@@ -69,6 +71,7 @@ class MainWindow(QMainWindow):
         self.current_detections: list[TrackedDetection] = []
         self.demo_objects = self._build_demo_objects()
         self.image_detector_window = None
+        self.video_detector_window = None
 
         self.build_ui()
         self._set_mode("demo")
@@ -88,8 +91,8 @@ class MainWindow(QMainWindow):
                 with config_path.open("r", encoding="utf-8") as handle:
                     loaded = json.load(handle)
                 defaults.update(loaded)
-            except Exception:
-                pass
+            except Exception as exc:
+                logging.exception("Failed to load config.json: %s", exc)
 
         return defaults
 
@@ -106,8 +109,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
 
         main_layout = QVBoxLayout(central)
-        main_layout.setContentsMargins(18, 18, 18, 18)
-        main_layout.setSpacing(14)
+        main_layout.setContentsMargins(14, 14, 14, 14)
+        main_layout.setSpacing(12)
         central.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         header = QFrame()
@@ -115,22 +118,22 @@ class MainWindow(QMainWindow):
         header.setStyleSheet(
             """
             QFrame#HeaderCard {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #101827, stop:1 #0B0F15);
-                border: 1px solid #1F2937;
-                border-radius: 18px;
+                background:#0F172A;
+                border:1px solid #223047;
+                border-radius:14px;
             }
             """
         )
         header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        header.setMinimumHeight(86)
+        header.setMinimumHeight(78)
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(22, 18, 22, 18)
+        header_layout.setContentsMargins(20, 14, 20, 14)
 
         title_box = QVBoxLayout()
-        title = QLabel("ADAS DEMO PLATFORM")
-        title.setStyleSheet("font-size:26px;font-weight:800;color:#00E5FF;")
-        subtitle = QLabel("BEV + 3D + YOLOv8 + Tracking + Proximity Alerts")
-        subtitle.setStyleSheet("color:#9CA3AF;font-size:11pt;")
+        title = QLabel("RADAR VISION CONTROL")
+        title.setStyleSheet("font-size:24px;font-weight:900;color:#00E5FF;")
+        subtitle = QLabel("LiDAR + Camera + YOLOv8 + Tracking temps reel")
+        subtitle.setStyleSheet("color:#94A3B8;font-size:10pt;font-weight:600;")
         title_box.addWidget(title)
         title_box.addWidget(subtitle)
         header_layout.addLayout(title_box)
@@ -140,16 +143,16 @@ class MainWindow(QMainWindow):
         self.mode_label.setStyleSheet(
             """
             color:#00FF95;
-            font-weight:700;
-            font-size:12pt;
-            padding:8px 14px;
-            background:#111827;
-            border:1px solid #1F2937;
-            border-radius:12px;
+            font-weight:800;
+            font-size:10pt;
+            padding:7px 13px;
+            background:#0B0F15;
+            border:1px solid #223047;
+            border-radius:10px;
             """
         )
         self.status_label = QLabel(self._status_text())
-        self.status_label.setStyleSheet("color:#9CA3AF;font-size:10pt;")
+        self.status_label.setStyleSheet("color:#94A3B8;font-size:9.5pt;font-weight:600;padding:4px 0;")
         status_box = QVBoxLayout()
         status_box.addWidget(self.mode_label, alignment=Qt.AlignRight)
         status_box.addWidget(self.status_label, alignment=Qt.AlignRight)
@@ -168,17 +171,17 @@ class MainWindow(QMainWindow):
         left_panel.setStyleSheet(
             """
             QFrame#SideCard {
-                background:#0F172A;
-                border:1px solid #1F2937;
-                border-radius:18px;
+                background:#0D1422;
+                border:1px solid #223047;
+                border-radius:14px;
             }
             """
         )
-        left_panel.setMinimumWidth(330)
+        left_panel.setMinimumWidth(300)
         left_panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         left_layout = QVBoxLayout(left_panel)
-        left_layout.setContentsMargins(16, 16, 16, 16)
-        left_layout.setSpacing(14)
+        left_layout.setContentsMargins(14, 14, 14, 14)
+        left_layout.setSpacing(12)
 
         self.controls = ControlsPanel()
         self.metrics = MetricsWidget()
@@ -243,9 +246,9 @@ class MainWindow(QMainWindow):
         self.controls.stop_btn.clicked.connect(self.stop_scan)
         self.controls.import_btn.clicked.connect(self.import_csv)
         self.controls.load_image_btn.clicked.connect(self.open_image_detector)
+        self.controls.load_video_btn.clicked.connect(self.open_video_detector)
         self.controls.demo_btn.clicked.connect(self.activate_demo_mode)
         self.controls.export_btn.clicked.connect(self.export_csv)
-        self.controls.export_json_btn.clicked.connect(self.export_json)
 
         self._apply_splitter_sizes()
 
@@ -255,24 +258,23 @@ class MainWindow(QMainWindow):
             """
             QFrame {
                 background:#111827;
-                border:1px solid #1F2937;
-                border-radius:14px;
+                border:1px solid #223047;
+                border-radius:10px;
             }
             QLabel#CardTitle {
-                color:#9CA3AF;
-                font-size:9pt;
-                font-weight:700;
-                letter-spacing:1px;
+                color:#00E5FF;
+                font-size:8.5pt;
+                font-weight:800;
             }
             QLabel#CardValue {
                 color:#E5E7EB;
-                font-size:11pt;
+                font-size:10pt;
                 font-weight:600;
             }
             """
         )
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setContentsMargins(14, 10, 14, 10)
         title = QLabel(title_text)
         title.setObjectName("CardTitle")
         value = QLabel(value_text)
@@ -303,12 +305,12 @@ class MainWindow(QMainWindow):
         self.mode_label.setStyleSheet(
             f"""
             color:{color};
-            font-weight:700;
-            font-size:12pt;
-            padding:8px 14px;
-            background:#111827;
-            border:1px solid #1F2937;
-            border-radius:12px;
+            font-weight:800;
+            font-size:10pt;
+            padding:7px 13px;
+            background:#0B0F15;
+            border:1px solid #223047;
+            border-radius:10px;
             """
         )
 
@@ -337,6 +339,14 @@ class MainWindow(QMainWindow):
         self.image_detector_window.show()
         self.image_detector_window.raise_()
         self.image_detector_window.activateWindow()
+
+    def open_video_detector(self):
+        if self.video_detector_window is None:
+            self.video_detector_window = VideoDetectorWindow()
+
+        self.video_detector_window.show()
+        self.video_detector_window.raise_()
+        self.video_detector_window.activateWindow()
 
     def activate_demo_mode(self):
         self.tracker.reset()
@@ -865,36 +875,6 @@ class MainWindow(QMainWindow):
 
         pd.DataFrame(rows).to_csv(filename, index=False)
         QMessageBox.information(self, "Export CSV", "Export CSV terminé")
-
-    def export_json(self):
-        if not self.current_detections:
-            QMessageBox.information(self, "Export JSON", "Aucune détection à exporter")
-            return
-
-        filename, _ = QFileDialog.getSaveFileName(self, "Export JSON", "detections.json", "JSON Files (*.json)")
-        if not filename:
-            return
-
-        payload = []
-        for detection in self.current_detections:
-            payload.append(
-                {
-                    "id": detection.track_id,
-                    "name": detection.name,
-                    "class": detection.class_name,
-                    "confidence": detection.confidence,
-                    "distance": detection.distance,
-                    "x": detection.x,
-                    "y": detection.y,
-                    "z": detection.z,
-                    "color": detection.color,
-                }
-            )
-
-        with open(filename, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, indent=2)
-
-        QMessageBox.information(self, "Export JSON", "Export JSON terminé")
 
     def _apply_splitter_sizes(self):
         if not hasattr(self, "body_splitter"):

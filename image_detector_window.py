@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import json
-
 import pandas as pd
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QFont, QGuiApplication, QPainter, QPen, QPixmap
@@ -105,12 +103,10 @@ class ImageDetectorWindow(QMainWindow):
 
         self.load_btn = QPushButton("Load Image")
         self.export_csv_btn = QPushButton("Export CSV")
-        self.export_json_btn = QPushButton("Export JSON")
         self.export_png_btn = QPushButton("Export Annotated PNG")
 
         toolbar_layout.addWidget(self.load_btn)
         toolbar_layout.addWidget(self.export_csv_btn)
-        toolbar_layout.addWidget(self.export_json_btn)
         toolbar_layout.addWidget(self.export_png_btn)
         toolbar_layout.addStretch()
         root.addWidget(toolbar)
@@ -195,7 +191,6 @@ class ImageDetectorWindow(QMainWindow):
 
         self.load_btn.clicked.connect(self.load_image)
         self.export_csv_btn.clicked.connect(self.export_csv)
-        self.export_json_btn.clicked.connect(self.export_json)
         self.export_png_btn.clicked.connect(self.export_annotated_image)
 
     def load_image(self):
@@ -297,35 +292,6 @@ class ImageDetectorWindow(QMainWindow):
 
         pd.DataFrame(rows).to_csv(filename, index=False)
         QMessageBox.information(self, "Export CSV", "Export CSV terminé")
-
-    def export_json(self):
-        if not self.current_detections:
-            QMessageBox.information(self, "Export JSON", "Aucune détection à exporter")
-            return
-
-        filename, _ = QFileDialog.getSaveFileName(self, "Export JSON", "image_detections.json", "JSON Files (*.json)")
-        if not filename:
-            return
-
-        payload = []
-        for detection in self.current_detections:
-            payload.append(
-                {
-                    "name": detection.name,
-                    "class": detection.class_name,
-                    "confidence": detection.confidence,
-                    "distance": detection.distance,
-                    "x": detection.x,
-                    "y": detection.y,
-                    "z": detection.z,
-                    "color": detection.color,
-                }
-            )
-
-        with open(filename, "w", encoding="utf-8") as handle:
-            json.dump(payload, handle, indent=2)
-
-        QMessageBox.information(self, "Export JSON", "Export JSON terminé")
 
     def export_annotated_image(self):
         if self.current_pixmap is None or self.current_pixmap.isNull() or not self.current_detections:

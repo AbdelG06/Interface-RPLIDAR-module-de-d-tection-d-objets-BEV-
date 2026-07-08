@@ -24,6 +24,11 @@ class PolarWidget(QWidget):
 
     def update_polar(self, angles, distances):
 
+        if len(angles) > 4000:
+            step = max(1, len(angles) // 4000)
+            angles = angles[::step]
+            distances = distances[::step]
+
         self.scatter.setData(
             angles,
             distances

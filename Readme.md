@@ -10,7 +10,7 @@ RPLIDAR BEV Detection System est une application Python développée avec **PySi
 - La détection automatique d'objets par clustering DBSCAN.
 - Le suivi d'objets avec identifiants persistants.
 - L'import de fichiers CSV simulant un RPLIDAR.
-- L'export des détections au format CSV et JSON.
+- L'export des détections au format CSV.
 - La surveillance d'une zone de sécurité configurable.
 - La simulation complète du système sans matériel RPLIDAR.
 
@@ -142,7 +142,6 @@ project/
 ├── utils/
 │   ├── alert_manager.py
 │   ├── config_loader.py
-│   └── json_exporter.py
 │
 ├── data/
 │

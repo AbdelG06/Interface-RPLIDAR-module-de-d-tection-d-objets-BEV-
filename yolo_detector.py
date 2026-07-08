@@ -4,7 +4,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
 
+import cv2
 import numpy as np
+import logging
 
 from object_tracker import TrackedDetection
 
@@ -16,17 +18,17 @@ class YoloStatus:
 
 
 class YOLODetector:
-    def __init__(self, model_name: str = "yolov8n.pt", confidence: float = 0.35):
+    def __init__(self, model_name: str = "yolov8n.pt", confidence: float = 0.25):
         self.model_name = model_name
         self.confidence = confidence
         self.model = None
-        self.status = YoloStatus(False, "YOLO non chargé")
+        self.status = YoloStatus(False, "YOLO non chargÃ©")
 
         try:
             from ultralytics import YOLO
 
             self.model = YOLO(model_name)
-            self.status = YoloStatus(True, f"YOLO prêt: {model_name}")
+            self.status = YoloStatus(True, f"YOLO prÃªt: {model_name}")
         except Exception as exc:  # pragma: no cover - runtime dependency guard
             self.status = YoloStatus(False, f"YOLO indisponible: {exc}")
 
@@ -112,7 +114,8 @@ class YOLODetector:
                 conf=self.confidence,
                 verbose=False,
             )
-        except Exception:  # pragma: no cover - runtime dependency guard
+        except Exception as exc:  # pragma: no cover - runtime dependency guard
+            logging.exception("YOLO detect_image failed")
             return []
 
         if not results:
@@ -145,3 +148,63 @@ class YOLODetector:
             detections.append(detection)
 
         return detections
+
+    def detect_frame(self, frame: np.ndarray, inference_width: int | None = None) -> list[TrackedDetection]:
+        if not self.is_ready() or frame is None:
+            return []
+
+        original_height, original_width = frame.shape[:2]
+        inference_frame = frame
+        scale = 1.0
+        if inference_width is not None and original_width > inference_width:
+            scale = inference_width / float(original_width)
+            inference_height = max(1, int(original_height * scale))
+            inference_frame = cv2.resize(frame, (inference_width, inference_height), interpolation=cv2.INTER_AREA)
+
+        try:
+            results = self.model.predict(
+                source=inference_frame,
+                conf=self.confidence,
+                imgsz=int(inference_width or 640),
+                max_det=20,
+                verbose=False,
+            )
+        except Exception as exc:  # pragma: no cover - runtime dependency guard
+            logging.exception("YOLO detect_frame failed")
+            return []
+
+        if not results:
+            return []
+
+        result = results[0]
+        detections: list[TrackedDetection] = []
+
+        boxes = getattr(result, "boxes", None)
+        if boxes is None:
+            return []
+
+        names = result.names if hasattr(result, "names") else {}
+        inverse_scale = 1.0 / scale
+
+        for box in boxes:
+            xyxy = box.xyxy[0].cpu().numpy().astype(float)
+            if scale != 1.0:
+                xyxy *= inverse_scale
+            xyxy = xyxy.tolist()
+            confidence = float(box.conf[0].cpu().numpy())
+            class_id = int(box.cls[0].cpu().numpy())
+            class_name = str(names.get(class_id, f"class_{class_id}"))
+
+            detection = self._estimate_3d_from_box(
+                class_name=class_name,
+                box=xyxy,
+                image_width=original_width,
+                image_height=original_height,
+            )
+            detection.confidence = confidence
+            detection.color = self._class_color(class_name)
+            detections.append(detection)
+
+        return detections
+
+
